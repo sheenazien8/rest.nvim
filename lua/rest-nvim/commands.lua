@@ -38,6 +38,15 @@
 ---                                 but directly insert curl command as a comment
 ---                                 instead.
 ---
+--- httpie yank {name?}            (experimental) Copy HTTPie command equivalent
+---                                 to HTTP request with given `name`. If no name
+---                                 is provided, copy from request under the
+---                                 cursor.
+---
+--- httpie comment {name?}           (experimental) Similar to `:Rest httpie yank`
+---                                 but directly insert HTTPie command as a comment
+---                                 instead.
+---
 ---NOTE: All `:Rest` commands opening new window support |command-modifiers|.
 ---For example, you can run `:hor Rest open` to open result pane in horizontal
 ---split or run `:tab Rest logs` to open logs file in a new tab.
@@ -236,7 +245,12 @@ local rest_command_tbl = {
                     return
                 end
                 require("nio").run(function()
-                    local req = parser().parse(req_node, 0)
+                    local Context = require("rest-nvim.context").Context
+                    local ctx = Context:new()
+                    if config().env.enable and vim.b._rest_nvim_env_file then
+                        ctx:load_file(vim.b._rest_nvim_env_file)
+                    end
+                    local req = parser().parse(req_node, 0, ctx)
                     if not req then
                         logger().error("failed to parse request")
                         vim.notify(
@@ -256,7 +270,12 @@ local rest_command_tbl = {
                     return
                 end
                 require("nio").run(function()
-                    local req = parser().parse(req_node, 0)
+                    local Context = require("rest-nvim.context").Context
+                    local ctx = Context:new()
+                    if config().env.enable and vim.b._rest_nvim_env_file then
+                        ctx:load_file(vim.b._rest_nvim_env_file)
+                    end
+                    local req = parser().parse(req_node, 0, ctx)
                     if not req then
                         logger().error("failed to parse request")
                         vim.notify(
@@ -275,8 +294,7 @@ local rest_command_tbl = {
                         false,
                         vim.tbl_map(function(line)
                             return "# " .. line
-                        end, vim.split(curl_command, "\n"))
-                    )
+                        end, vim.split(curl_command, "\n")))
                 end)
             -- elseif args[1] == "to-http" then
             --   -- TODO: convert comment with curl to http request and insert it below
@@ -293,6 +311,80 @@ local rest_command_tbl = {
                 "yank",
                 "comment",
                 -- "to-http",
+            }
+        end,
+    },
+    httpie = {
+        impl = function(args, _)
+            if args[1] == "yank" or args[1] == "copy" then
+                local req_node = parser().get_request_node(args[2])
+                if not req_node then
+                    return
+                end
+                require("nio").run(function()
+                    local Context = require("rest-nvim.context").Context
+                    local ctx = Context:new()
+                    if config().env.enable and vim.b._rest_nvim_env_file then
+                        ctx:load_file(vim.b._rest_nvim_env_file)
+                    end
+                    local req = parser().parse(req_node, 0, ctx)
+                    if not req then
+                        logger().error("failed to parse request")
+                        vim.notify(
+                            "failed to parse request. See `:Rest logs` for more info",
+                            vim.log.levels.ERROR,
+                            { title = "rest.nvim" }
+                        )
+                        return
+                    end
+                    local httpie_command = require("rest-nvim.client.httpie").builder.build_command(req)
+                    vim.fn.setreg("+", httpie_command .. "\n")
+                    vim.notify("Copied HTTPie command to clipboard", vim.log.levels.INFO, { title = "rest.nvim" })
+                end)
+            elseif args[1] == "comment" then
+                local req_node = parser().get_request_node(args[2])
+                if not req_node then
+                    return
+                end
+                require("nio").run(function()
+                    local Context = require("rest-nvim.context").Context
+                    local ctx = Context:new()
+                    if config().env.enable and vim.b._rest_nvim_env_file then
+                        ctx:load_file(vim.b._rest_nvim_env_file)
+                    end
+                    local req = parser().parse(req_node, 0, ctx)
+                    if not req then
+                        logger().error("failed to parse request")
+                        vim.notify(
+                            "failed to parse request. See `:Rest logs` for more info",
+                            vim.log.levels.ERROR,
+                            { title = "rest.nvim" }
+                        )
+                        return
+                    end
+                    local httpie_command = require("rest-nvim.client.httpie").builder.build_command(req)
+                    local start = req_node:range()
+                    vim.api.nvim_buf_set_lines(
+                        0,
+                        start,
+                        start,
+                        false,
+                        vim.tbl_map(function(line)
+                            return "# " .. line
+                        end, vim.split(httpie_command, "\n")))
+                end)
+            else
+                vim.notify(
+                    "Invalid action '" .. args[1] .. "' provided to 'httpie' command",
+                    vim.log.levels.ERROR,
+                    { title = "rest.nvim" }
+                )
+            end
+        end,
+        complete = function(_args)
+            return {
+                "yank",
+                "comment",
             }
         end,
     },

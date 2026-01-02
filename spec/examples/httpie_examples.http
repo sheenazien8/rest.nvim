@@ -1,0 +1,39 @@
+### Example for testing httpie command builder
+### This file demonstrates the HTTPie command copy feature
+
+### Simple GET request
+GET https://httpbin.org/get
+User-Agent: rest.nvim
+
+### POST request with JSON body
+POST https://httpbin.org/post
+Content-Type: application/json
+
+{
+    "name": "John Doe",
+    "email": "john@example.com"
+}
+
+### POST request with form data
+POST https://httpbin.org/post
+Content-Type: application/x-www-form-urlencoded
+
+name=Alice&age=30
+
+### Request with cookies
+GET https://httpbin.org/cookies
+Cookie: session=abc123; user=john
+
+### Request with multiple headers
+GET https://api.github.com/users/octocat
+User-Agent: rest.nvim
+Accept: application/vnd.github+json
+Authorization: Bearer token
+
+### GraphQL request
+POST https://api.github.com/graphql
+Content-Type: application/json
+
+{
+    "query": "query { viewer { login } }"
+}

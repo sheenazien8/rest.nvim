@@ -1,0 +1,19 @@
+### Test request with environment variables
+# This tests that .env variables are expanded in curl yank and httpie yank commands
+
+### GET request with base URL from env
+GET {{BASE_URL}}/get
+User-Agent: rest.nvim
+X-API-Key: {{API_KEY}}
+
+### POST request with variables
+POST {{BASE_URL}}/post
+Content-Type: application/json
+
+{
+    "userId": {{USER_ID}},
+    "apiKey": "{{API_KEY}}"
+}
+
+### Request with URL parameter from env
+GET {{BASE_URL}}/anything?id={{USER_ID}}
