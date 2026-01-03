@@ -230,13 +230,18 @@ local rest_command_tbl = {
     -- TODO(boltless): complete curl command
     curl = {
         impl = function(args, _)
+            local Context = require("rest-nvim.context").Context
+            local ctx = Context:new()
+            if config().env.enable and vim.b._rest_nvim_env_file then
+                ctx:load_file(vim.b._rest_nvim_env_file)
+            end
             if args[1] == "yank" or args[1] == "copy" then
                 local req_node = parser().get_request_node(args[2])
                 if not req_node then
                     return
                 end
                 require("nio").run(function()
-                    local req = parser().parse(req_node, 0)
+                    local req = parser().parse(req_node, 0, ctx)
                     if not req then
                         logger().error("failed to parse request")
                         vim.notify(
@@ -256,7 +261,7 @@ local rest_command_tbl = {
                     return
                 end
                 require("nio").run(function()
-                    local req = parser().parse(req_node, 0)
+                    local req = parser().parse(req_node, 0, ctx)
                     if not req then
                         logger().error("failed to parse request")
                         vim.notify(
